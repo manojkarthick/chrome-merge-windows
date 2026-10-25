@@ -48,7 +48,6 @@ make check       # syntax, manifest, permission and asset checks
 make test        # API-model tests, including deliberate failures
 make package     # run checks/tests; create the installable ZIP
 make test-live   # integration test; requires agent-browser and Chrome for Testing 155+
-make bump VERSION=x.y.z  # raise the manifest version
 ```
 
 The live harness starts disposable profiles, serves local fixture pages, enables Incognito only in its test profile, and closes its browsers and removes its profiles afterward. It uses the installed `agent-browser` CLI; no runtime dependency is shipped. See [agent-browser](https://github.com/vercel-labs/agent-browser) for setup. It needs permission to launch browsers and bind a loopback test server in restricted environments. It never attaches to the user's Chrome profile. Browser files and agent-browser's own session metadata are managed by that CLI.
@@ -67,16 +66,12 @@ Implementation and reuse research is recorded in [docs/decisions.md](docs/decisi
 
 GitHub Actions runs `make package` (checks, tests, and the ZIP build) on every pull request and push to `main`, and keeps the ZIP as a workflow artifact. The live integration test is not run in CI.
 
-`extension/manifest.json` holds the only version number. The Chrome Web Store rejects an upload unless its version is higher than the published one, and `make bump` refuses anything else. To release:
+`extension/manifest.json` holds the only version number. To release, run the **Release** workflow from the Actions tab on `main` and enter the new version, or use `gh workflow run release.yml -f version=x.y.z`. The workflow:
 
-```sh
-make bump VERSION=x.y.z
-git commit -am "chore: release x.y.z"
-git tag vx.y.z
-git push origin main vx.y.z
-```
-
-The tag triggers the release workflow. It fails if the tag doesn't match the manifest version, runs the full `make package`, and attaches the ZIP to a GitHub release. That ZIP is the one to upload to the store.
+1. Sets the manifest version with `scripts/bump.mjs`. The run fails unless the version is valid for Chrome and higher than the current one, because the Chrome Web Store rejects an upload that isn't higher than the published version.
+2. Runs the full `make package`.
+3. Commits `chore: release x.y.z` to `main`, tags it `vx.y.z`, and pushes both.
+4. Creates a GitHub release with the ZIP attached. That ZIP is the one to upload to the store.
 
 ## License
 

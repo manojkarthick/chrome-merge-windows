@@ -1,15 +1,22 @@
 name: Release
 
 on:
-  push:
-    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, e.g. 0.2.0. Must be higher than the manifest's current version."
+        required: true
+        type: string
 
 permissions:
   contents: write
 
 jobs:
   release:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -18,15 +25,17 @@ jobs:
           node-version: 22
           # No dependencies, so there is no lockfile to key a pnpm cache on.
           package-manager-cache: false
-      - name: Check tag matches manifest version
-        run: |
-          expected="v$(node -p 'require("./extension/manifest.json").version')"
-          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
-            echo "Tag $GITHUB_REF_NAME does not match manifest version $expected." >&2
-            exit 1
-          fi
+      - run: node scripts/bump.mjs "$VERSION"
       - run: make package
+      - name: Commit and tag the version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore: release $VERSION"
+          git tag "v$VERSION"
+          # Atomic, so a rejected main push (e.g. main moved during the run) leaves no orphan tag.
+          git push --atomic origin HEAD:main "v$VERSION"
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/*.zip --verify-tag --generate-notes
+        run: gh release create "v$VERSION" dist/*.zip --verify-tag --generate-notes
