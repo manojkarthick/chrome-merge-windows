@@ -16,6 +16,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+          # No dependencies, so there is no lockfile to key a pnpm cache on.
+          package-manager-cache: false
       - name: Check tag matches manifest version
         run: |
           expected="v$(node -p 'require("./extension/manifest.json").version')"
