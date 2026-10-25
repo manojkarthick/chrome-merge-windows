@@ -48,6 +48,7 @@ make check       # syntax, manifest, permission and asset checks
 make test        # API-model tests, including deliberate failures
 make package     # run checks/tests; create the installable ZIP
 make test-live   # integration test; requires agent-browser and Chrome for Testing 155+
+make bump VERSION=x.y.z  # raise the manifest version
 ```
 
 The live harness starts disposable profiles, serves local fixture pages, enables Incognito only in its test profile, and closes its browsers and removes its profiles afterward. It uses the installed `agent-browser` CLI; no runtime dependency is shipped. See [agent-browser](https://github.com/vercel-labs/agent-browser) for setup. It needs permission to launch browsers and bind a loopback test server in restricted environments. It never attaches to the user's Chrome profile. Browser files and agent-browser's own session metadata are managed by that CLI.
@@ -58,6 +59,25 @@ Edit `extension/` and click **Reload** on `chrome://extensions` before testing a
 
 To create a distributable archive, run `make package`. It writes `dist/chrome-merge-windows-<version>.zip`, using the version from `extension/manifest.json`. `dist/` is generated and gitignored, so a fresh clone has no ZIP. Rebuild after changing the source. Recipients can extract the generated ZIP into a permanent folder and load that folder through **Load unpacked**. An already extracted copy must be replaced after rebuilding; reloading it in Chrome alone does not copy new files into it.
 
-`scripts/package.mjs` uses the system `zip` CLI and an explicit file allowlist; the ZIP contains only runtime assets with `manifest.json` at its root. The packaging regression test uses `unzip` to verify the archive's exact entries and bytes, its manifest-derived filename, and replacement of a stale archive. Distribution is undecided; nothing is published or signed by these commands. Decide licensing and store listing details before public distribution.
+`scripts/package.mjs` uses the system `zip` CLI and an explicit file allowlist; the ZIP contains only runtime assets with `manifest.json` at its root. The packaging regression test uses `unzip` to verify the archive's exact entries and bytes, its manifest-derived filename, and replacement of a stale archive. Nothing is published or signed by these commands.
 
 Implementation and reuse research is recorded in [docs/decisions.md](docs/decisions.md).
+
+## CI and releases
+
+GitHub Actions runs `make package` (checks, tests, and the ZIP build) on every pull request and push to `main`, and keeps the ZIP as a workflow artifact. The live integration test is not run in CI.
+
+`extension/manifest.json` holds the only version number. The Chrome Web Store rejects an upload unless its version is higher than the published one, and `make bump` refuses anything else. To release:
+
+```sh
+make bump VERSION=x.y.z
+git commit -am "chore: release x.y.z"
+git tag vx.y.z
+git push origin main vx.y.z
+```
+
+The tag triggers the release workflow. It fails if the tag doesn't match the manifest version, runs the full `make package`, and attaches the ZIP to a GitHub release. That ZIP is the one to upload to the store.
+
+## License
+
+[MIT](LICENSE)
