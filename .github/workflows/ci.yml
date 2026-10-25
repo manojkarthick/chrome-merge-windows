@@ -20,7 +20,7 @@ jobs:
           # No dependencies, so there is no lockfile to key a pnpm cache on.
           package-manager-cache: false
       - run: make package
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: extension-zip
           path: dist/*.zip
