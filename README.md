@@ -66,12 +66,9 @@ Implementation and reuse research is recorded in [docs/decisions.md](docs/decisi
 
 GitHub Actions runs `make package` (checks, tests, and the ZIP build) on every pull request and push to `main`, and keeps the ZIP as a workflow artifact. The live integration test is not run in CI.
 
-`extension/manifest.json` holds the only version number. To release, run the **Release** workflow from the Actions tab on `main` and enter the new version, or use `gh workflow run release.yml -f version=x.y.z`. The workflow:
+Releases use [release-please](https://github.com/googleapis/release-please). On every push to `main`, it opens or updates a release PR. That PR raises the version in `extension/manifest.json` and `.release-please-manifest.json` and adds the pending changes to `CHANGELOG.md`. The version comes from the conventional commit types since the last release: `fix` raises the patch number, `feat` the minor, and a breaking change the major. A `Release-As: x.y.z` commit footer overrides it. Don't use pre-release suffixes, because Chrome versions allow only numbers.
 
-1. Sets the manifest version with `scripts/bump.mjs`. The run fails unless the version is valid for Chrome and higher than the current one, because the Chrome Web Store rejects an upload that isn't higher than the published version.
-2. Runs the full `make package`.
-3. Commits `chore: release x.y.z` to `main`, tags it `vx.y.z`, and pushes both.
-4. Creates a GitHub release with the ZIP attached. That ZIP is the one to upload to the store.
+Merging the release PR tags `vx.y.z` and creates a GitHub release. The workflow then runs `make package` and attaches the ZIP; that ZIP is the one to upload to the Chrome Web Store. Don't edit the version by hand.
 
 ## License
 
