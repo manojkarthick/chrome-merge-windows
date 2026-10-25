@@ -13,14 +13,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Opens or updates the release PR; merging it tags the version and creates the GitHub release.
-      - uses: googleapis/release-please-action@v5
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
         id: release
       - if: ${{ steps.release.outputs.release_created }}
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - if: ${{ steps.release.outputs.release_created }}
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
       - if: ${{ steps.release.outputs.release_created }}
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
           # No dependencies, so there is no lockfile to key a pnpm cache on.
