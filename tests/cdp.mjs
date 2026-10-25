@@ -46,5 +46,22 @@ export async function connectCDP(url) {
       if (response.exceptionDetails) throw new Error(response.exceptionDetails.exception?.description ?? "Test evaluation failed.");
       return response.result.value;
     },
+    async call(sessionId, fn, ...args) {
+      const { result } = await send("Runtime.evaluate", { expression: "globalThis" }, sessionId);
+      try {
+        // Protocol arguments keep test data out of executable JavaScript source.
+        const response = await send("Runtime.callFunctionOn", {
+          objectId: result.objectId,
+          functionDeclaration: fn.toString(),
+          arguments: args.map((value) => ({ value })),
+          awaitPromise: true,
+          returnByValue: true,
+        }, sessionId);
+        if (response.exceptionDetails) throw new Error(response.exceptionDetails.exception?.description ?? "Test function call failed.");
+        return response.result.value;
+      } finally {
+        await send("Runtime.releaseObject", { objectId: result.objectId }, sessionId);
+      }
+    },
   };
 }
