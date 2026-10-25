@@ -72,7 +72,10 @@ try {
   await cli("wait", "--fn", 'document.querySelector("main").getAttribute("aria-busy") === "false"');
   const worker = (await cdp.send("Target.getTargets")).targetInfos.find((target) => target.url === `chrome-extension://${extensionId}/background.js`);
   const { sessionId: workerSession } = await cdp.send("Target.attachToTarget", { targetId: worker.targetId, flatten: true });
-  const invokeClick = (tab, session = workerSession) => cdp.evaluate(session, `(async()=>{await globalThis.testHandleClick(${JSON.stringify(tab)});return true;})()`);
+  const invokeClick = (tab, session = workerSession) => cdp.call(session, async (tab) => {
+    await globalThis.testHandleClick(tab);
+    return true;
+  }, tab);
   const noOpTab = await evaluate(`(async()=>{const win=await chrome.windows.getCurrent({populate:true});return win.tabs.find(t=>t.active);})()`);
   let eventStart = cdp.events.length;
   await invokeClick(noOpTab);
@@ -189,7 +192,19 @@ try {
     await chrome.tabs.update(window.fixture.harness,{active:true});
     return {source:source.id,failID:tabs[1].id,expected:tabs.slice(1).map(t=>t.id)};
   })()`);
-  await cdp.evaluate(workerSession, `(async()=>{const move=chrome.tabs.move;chrome.tabs.move=async(id,props)=>{if(id===${partial.failID})throw new Error('Injected move failure.');return move(id,props);};try{await globalThis.testHandleClick(${JSON.stringify({ id: fixture.harness, windowId: fixture.target })});}finally{chrome.tabs.move=move;}return true;})()`);
+  await cdp.call(workerSession, async (failID, tab) => {
+    const move = chrome.tabs.move;
+    chrome.tabs.move = async (id, props) => {
+      if (id === failID) throw new Error("Injected move failure.");
+      return move(id, props);
+    };
+    try {
+      await globalThis.testHandleClick(tab);
+    } finally {
+      chrome.tabs.move = move;
+    }
+    return true;
+  }, partial.failID, { id: fixture.harness, windowId: fixture.target });
   const failed = await evaluate(`(async()=>({title:await chrome.action.getTitle({}),remaining:(await chrome.tabs.query({windowId:${partial.source}})).map(t=>t.id)}))()`);
   check("injected failure stops real moves and leaves remaining source tabs intact", () => {
     assert.match(failed.title, /Stopped after 1 tab moved/);
