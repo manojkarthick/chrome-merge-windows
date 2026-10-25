@@ -20,7 +20,7 @@ jobs:
       - if: ${{ steps.release.outputs.release_created }}
         uses: pnpm/action-setup@v6
       - if: ${{ steps.release.outputs.release_created }}
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           # No dependencies, so there is no lockfile to key a pnpm cache on.
