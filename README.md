@@ -58,6 +58,18 @@ Edit `extension/` and click **Reload** on `chrome://extensions` before testing a
 
 To create a distributable archive, run `make package`. It writes `dist/chrome-merge-windows-<version>.zip`, using the version from `extension/manifest.json`. `dist/` is generated and gitignored, so a fresh clone has no ZIP. Rebuild after changing the source. Recipients can extract the generated ZIP into a permanent folder and load that folder through **Load unpacked**. An already extracted copy must be replaced after rebuilding; reloading it in Chrome alone does not copy new files into it.
 
-`scripts/package.mjs` uses the system `zip` CLI and an explicit file allowlist; the ZIP contains only runtime assets with `manifest.json` at its root. The packaging regression test uses `unzip` to verify the archive's exact entries and bytes, its manifest-derived filename, and replacement of a stale archive. Distribution is undecided; nothing is published or signed by these commands. Decide licensing and store listing details before public distribution.
+`scripts/package.mjs` uses the system `zip` CLI and an explicit file allowlist; the ZIP contains only runtime assets with `manifest.json` at its root. The packaging regression test uses `unzip` to verify the archive's exact entries and bytes, its manifest-derived filename, and replacement of a stale archive. Nothing is published or signed by these commands.
 
 Implementation and reuse research is recorded in [docs/decisions.md](docs/decisions.md).
+
+## CI and releases
+
+GitHub Actions runs `make package` (checks, tests, and the ZIP build) on every pull request and push to `main`, and keeps the ZIP as a workflow artifact. The live integration test is not run in CI.
+
+Releases use [release-please](https://github.com/googleapis/release-please). On every push to `main`, it opens or updates a release PR. That PR raises the version in `extension/manifest.json` and `.release-please-manifest.json` and adds the pending changes to `CHANGELOG.md`. The version comes from the conventional commit types since the last release: `fix` raises the patch number, `feat` the minor, and a breaking change the major. A `Release-As: x.y.z` commit footer overrides it. Don't use pre-release suffixes, because Chrome versions allow only numbers.
+
+Merging the release PR tags `vx.y.z` and creates a GitHub release. The workflow then runs `make package` and attaches the ZIP; that ZIP is the one to upload to the Chrome Web Store. Don't edit the version by hand.
+
+## License
+
+[MIT](LICENSE)
