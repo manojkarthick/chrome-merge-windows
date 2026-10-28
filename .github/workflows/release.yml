@@ -22,7 +22,7 @@ jobs:
       - if: ${{ steps.release.outputs.release_created }}
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: 24
+          node-version: 26
           # No dependencies, so there is no lockfile to key a pnpm cache on.
           package-manager-cache: false
       - if: ${{ steps.release.outputs.release_created }}
