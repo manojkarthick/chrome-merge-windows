@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# `make package` runs scripts/package.mjs, which shells out to `zip`;
+# the packaging regression test inspects the archive with `unzip`.
+missing=()
+for tool in zip unzip; do
+  command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
+done
+
+if ((${#missing[@]})); then
+  echo "Installing ${missing[*]}"
+  time (sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${missing[@]}")
+else
+  echo "zip and unzip already installed"
+fi
