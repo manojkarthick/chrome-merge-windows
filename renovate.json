@@ -4,5 +4,12 @@
     ":automergeAll",
     "config:best-practices",
     ":semanticCommits"
+  ],
+  "packageRules": [
+    {
+      "description": "The Chrome Web Store upload action receives store credentials; review its dist/index.js diff before merging.",
+      "matchDepNames": ["mnao305/chrome-extension-upload"],
+      "automerge": false
+    }
   ]
 }

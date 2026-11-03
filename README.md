@@ -4,10 +4,11 @@ A standalone, dependency-free Manifest V3 extension. Click its toolbar icon to m
 
 ## Install and use
 
-1. Clone or download this repository and keep it in a permanent location. The extension is ready to load directly from `extension/`; no build is needed.
-2. Open `chrome://extensions`, enable **Developer mode**, select **Load unpacked**, and choose this repository's `extension/` folder.
-3. Pin **Merge Chrome Windows** using Chrome's Extensions menu.
-4. Click its icon in the window you want to keep. Merging starts immediately; there is no confirmation or preview.
+1. Install [Merge Chrome Windows from the Chrome Web Store](https://chromewebstore.google.com/detail/merge-chrome-windows/cmleblelichjnfkllbdhfcobifpkmjdk).
+2. Pin **Merge Chrome Windows** using Chrome's Extensions menu.
+3. Click its icon in the window you want to keep. Merging starts immediately; there is no confirmation or preview.
+
+To run it from source instead, clone or download this repository and keep it in a permanent location. Open `chrome://extensions`, enable **Developer mode**, select **Load unpacked**, and choose this repository's `extension/` folder. No build is needed.
 
 Successful merges and no-op results open no popup. A successful invocation shows `✓` for about one second, then clears the badge. Only errors show `!` and open a details popup; **Done** dismisses it. The error badge remains until the next invocation. Hover text retains the last result, including if Chrome cannot open details. When source split views need rebuilding, the tooltip reports how many were rebuilt side-by-side at 50/50. Clicking again starts a new invocation; clicks during a merge are ignored. Badges and hover text describe the last invocation in that profile/mode and can appear in other windows too; they are not a per-window history.
 
@@ -68,7 +69,20 @@ GitHub Actions runs `make package` (checks, tests, and the ZIP build) on every p
 
 Releases use [release-please](https://github.com/googleapis/release-please). On every push to `main`, it opens or updates a release PR. That PR raises the version in `extension/manifest.json` and `.release-please-manifest.json` and adds the pending changes to `CHANGELOG.md`. The version comes from the conventional commit types since the last release: `fix` raises the patch number, `feat` the minor, and a breaking change the major. A `Release-As: x.y.z` commit footer overrides it. Don't use pre-release suffixes, because Chrome versions allow only numbers.
 
-Merging the release PR tags `vx.y.z` and creates a GitHub release. The workflow then runs `make package` and attaches the ZIP; that ZIP is the one to upload to the Chrome Web Store. Don't edit the version by hand.
+Merging the release PR tags `vx.y.z` and creates a GitHub release. The workflow then runs `make package`, attaches the ZIP to the release, and passes the same ZIP to a separate `publish` job that uploads it to the Chrome Web Store and submits it for review. Don't edit the version by hand.
+
+The `publish` job runs [`mnao305/chrome-extension-upload`](https://github.com/mnao305/chrome-extension-upload), pinned to an audited commit SHA. It is isolated from the release job: it has `permissions: {}`, does not check out the repository, and receives only the release ZIP as a workflow artifact, with an exact file name built from the release version. It runs in the `chrome-web-store` environment, which holds the store credentials.
+
+One-time setup, done by the repository owner (see [Use the Chrome Web Store API](https://developer.chrome.com/docs/webstore/using-api)):
+
+1. Enable the Chrome Web Store API in a Google Cloud project and create an OAuth client.
+2. Generate a refresh token with the `https://www.googleapis.com/auth/chromewebstore` scope.
+3. Copy the publisher ID (Developer Dashboard → Publisher → Settings) and the extension ID, `cmleblelichjnfkllbdhfcobifpkmjdk`.
+4. In the repository settings, create the `chrome-web-store` environment. Limit its deployment branches to `main` and add a required reviewer if you want to approve each submission. Add the secrets `CHROME_EXTENSION_ID`, `CHROME_PUBLISHER_ID`, `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET` and `CHROME_REFRESH_TOKEN`.
+
+The store refuses uploads while a version is in review. Don't merge a release PR while a version is pending, or the `publish` job fails; rerun it after the review finishes. Each publish starts a new store review.
+
+Renovate does not automerge updates to the upload action. Before merging a PR that bumps its SHA, review the `dist/index.js` diff in the action repository: it is the code GitHub runs, and it receives the store credentials. Check that it still contacts only Google's OAuth and Chrome Web Store endpoints and does not log secrets or run commands.
 
 ## License
 
