@@ -3,7 +3,7 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "packageManager": "pnpm@12.17.0",
+  "packageManager": "pnpm@12.18.0",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
     "check": "node scripts/check.mjs",
